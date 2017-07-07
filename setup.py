@@ -5,11 +5,11 @@ Note that it does not perform any installation of the documentation. For this, f
 """
 
 from setuptools import setup
-
+from simplesimman import __version__
 
 setup(
     name="SimpleSimManager",
-    version="0.0.1",
+    version=__version__,
     packages=['simplesimman'],
     author="Anand Subramoney, Arjun Rao",
     author_email="anand@igi.tugraz.at, arjun@igi.tugraz.at",
