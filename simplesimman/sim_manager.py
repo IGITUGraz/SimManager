@@ -3,6 +3,7 @@ from subprocess import Popen, PIPE
 import os
 import logging
 import sys
+from shutil import rmtree
 
 import contextlib
 
@@ -89,6 +90,13 @@ class SimManager:
             if os.path.isfile('.sim_manager_write_locked') and not self._overwrite:
                 raise RuntimeError(
                     'The output directory {} already contains a completed simulation'.format(outdirpath))
+
+        # Clear any previous content from the directory
+        if os.listdir(outdirpath):
+            rmtree(outdirpath)
+            outdirpath = self.paths.output_dir_path
+
+        # Create relevant files
         self.create_simulation_description()
         self.create_command_file()
         self.create_commit_id_file()
