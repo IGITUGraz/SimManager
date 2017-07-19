@@ -1,11 +1,9 @@
 from . import Paths
-from subprocess import Popen, PIPE
 import os
 import logging
 import sys
-from shutil import rmtree
 
-import contextlib
+from ._utils import _changed_to_temp_dir, _get_output
 
 try:  # py3
     from shlex import quote, split
@@ -15,36 +13,13 @@ except ImportError:  # py2
 logger = logging.getLogger('sim_manager')
 
 
-@contextlib.contextmanager
-def _changed_to_temp_dir(dirname):
-    curdir = os.getcwd()
-    try:
-        os.chdir(dirname)
-        yield dirname
-    finally:
-        os.chdir(curdir)
-
-
-def _get_output(args, input_str=None, as_bytes=False):
-    if input_str is not None:
-        stdin_arg = PIPE
-    else:
-        stdin_arg = None
-    proc = Popen(args, stdout=PIPE, stderr=PIPE, stdin=stdin_arg)
-    stdout_, stderr_ = proc.communicate(input=input_str)
-    if not as_bytes:
-        return stdout_.decode('utf-8'), stderr_.decode('utf-8')
-    else:
-        return stdout_, stderr_
-
-
 class SimManager:
     """
     This is a simulation manaager that performs all the drudgery of copying relevant
     stuff to the results folder so that the results are completely reproducible.
     """
 
-    def __init__(self, root_dir_name, param_dict, root_dir_path, overwrite=False):
+    def __init__(self, root_dir_name, param_dict, root_dir_path):
         """
         Create a simulation manager object / context manager.__init__
 
@@ -56,16 +31,13 @@ class SimManager:
 
         :param root_dir_path: The root dir path where the root dir is created
 
-        :param overwrite: If True, then the contents of the directory will be
-            overwritten in case the directory exists. Else, an exception is raised.
-
         NOTE THAT root_dir_name, param_dict, root_dir_path are arguments passed to
         the Paths class. The corresponding paths object can be accessed through the
         `paths` member variable
         """
 
-        self.paths = Paths(root_dir_name=root_dir_name, param_dict=param_dict, root_dir_path=root_dir_path)
-        self._overwrite = overwrite
+        self.paths = Paths(root_dir_name=root_dir_name, param_dict=param_dict, root_dir_path=root_dir_path,
+                           create_clean=True)
         stdout_, stderr_ = _get_output(['git', 'rev-parse', '--show-toplevel'])
 
         print(len(stderr_))
@@ -84,17 +56,13 @@ class SimManager:
         if not, store commit ID and diff and YAML template for a description
         """
 
-        # Check if the given directory is valid
-        outdirpath = self.paths.output_dir_path
-        with _changed_to_temp_dir(outdirpath):
-            if os.path.isfile('.sim_manager_write_locked') and not self._overwrite:
-                raise RuntimeError(
-                    'The output directory {} already contains a completed simulation'.format(outdirpath))
+        # Check if the given directory is valid. Note that this code is no longer
+        # relevant for any directories created from now on. This only exists so that
+        # directories created with previous versions are not overwritten
 
-        # Clear any previous content from the directory
-        if os.listdir(outdirpath):
-            rmtree(outdirpath)
-            outdirpath = self.paths.output_dir_path
+        self.paths.__enter__()
+
+        outdirpath = self.paths.output_dir_path
 
         # Create relevant files
         self.create_simulation_description()
@@ -107,10 +75,7 @@ class SimManager:
         """
         Here we lock the directory by creating a lock file
         """
-        if exc_type is None:
-            self.create_lock_file()
-        else:
-            print(exc_type)
+        return self.paths.__exit__(exc_type, exc_value, traceback)
 
     def get_command(self):
         """
