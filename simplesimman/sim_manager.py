@@ -175,6 +175,7 @@ class SimManager:
         yaml_file_string += ["title: {}".format('')]
         yaml_file_string += ["reason: |"]
         yaml_file_string += ["result: |"]
+        yaml_file_string += ["keywords: |"]
         with _changed_to_temp_dir(self.paths.output_dir_path):
             with open('DESCRIPTION.yaml', 'w') as desc_file:
                 desc_file.write('\n'.join(yaml_file_string))
