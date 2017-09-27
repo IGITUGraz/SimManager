@@ -40,7 +40,6 @@ class SimManager:
                            create_clean=True)
         stdout_, stderr_ = _get_output(['git', 'rev-parse', '--show-toplevel'])
 
-        print(len(stderr_))
         if not len(stderr_):
             self.repopath = stdout_[:-1]  # remove trailing newline
         else:

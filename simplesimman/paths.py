@@ -22,12 +22,12 @@ class Paths:
         Manages generating paths for various cases
 
         :param root_dir_name: Root dir name where all the subdirectories are created
-        :param param_dict: Dictionary in the form of dict(paramname1=param1val,
-            paramname2=param2val). See :meth:`Paths.output_dir_path` for where this
-            is used.
+        :param param_dict: Dictionary in the form of dict(paramname1=param1val, paramname2=param2val).
+            See :meth:`Paths.output_dir_path` for where this is used.
         :param suffix: Suffix used for various output files
         :param root_dir_path: The root dir path where the root dir is created
-        :param create_clean: The output directory when created is created clean/empty with all previous 
+        :param create_clean: The output directory when created is created clean/empty with all previous
+            content removed.
         """
         self._root_dir_name = root_dir_name
         self._root_dir_path = root_dir_path
