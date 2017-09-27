@@ -8,7 +8,8 @@ from ._utils import _rm_anything_recursive
 
 __author__ = 'anand'
 
-LOCK_FILE_NAME = '.registered_with_paths_library'
+ABORTED_SIM_FILE_NAME = '.contains_aborted_simulation'
+WRITE_IN_PROGRESS_FILE_NAME = '.write_in_progress'
 
 
 class PathsLibraryError(Exception):
@@ -36,6 +37,7 @@ class Paths:
         self._suffix = suffix
         self._param_combo = order_dict_alphabetically(param_dict)
         self._create_clean = bool(create_clean)
+        self._has_locked_directory = False
 
     def __enter__(self):
         self._as_context_manager = True
@@ -45,20 +47,40 @@ class Paths:
         """
         Here we release our control of the directory by deleting the lock file.
         """
-        if exc_type is None:
-            self._release_output_dir()
-        self._as_context_manager = False
+        self._perform_cleanup(exc_type is not None)
 
     def _validate_output_directory(self):
-        if os.path.isdir(self._output_dir_path):
-            if os.path.isfile('.sim_manager_write_locked'):
-                raise PathsLibraryError(
-                    'The output directory {} already contains a completed simulation'.format(self._output_dir_path))
+        """
+        This function validates the directory, secures write access and returns if it succeeded
+        else it throws a PathsLibraryError
+        """
+        # This attempts to create a lock file. Only if it is successful will it assume control of
+        # the directory else it will throw an error This is to prevent the directory from being
+        # overwritten by parallel running simulations that use the path library.
+        try:
+            with open(self._write_in_progress_file_path, 'x') as wip_file:
+                wip_file.write("The presence of this file in the directory allows the Paths library"
+                               " that created this file to write into the directory in a multi-threading"
+                               " safe manner. This file is deleted at the end of the simulations"
+                               " whether there's an exception or not")
+        except FileExistsError:
+            raise PathsLibraryError(
+                "It appears that the directory {} already exists and is being written"
+                " currently by another simulation. Cannot create file {}"
+                .format(self._output_dir_path, WRITE_IN_PROGRESS_FILE_NAME))
+        else:
+            self._has_locked_directory = True
 
-            if not os.path.isfile(self._lock_file_path):
+        if os.path.isdir(self._output_dir_path):
+            if not os.path.isfile(self._aborted_sim_file_path):
                 raise PathsLibraryError(
-                    "It appears that the directory {} already exists and "
-                    "is not registered to be overwritten by the Paths library".format(self._output_dir_path))
+                    "The lack of the file .contains_aborted_simulation indicates that the directory {}"
+                    " already exists and contains something other than an aborted simulation. Hence It will"
+                    " not be overridden.".format(self._output_dir_path))
+            else:
+                os.remove(self._aborted_sim_file_path)
+        else:
+            os.makedirs(self._output_dir_path)
 
     def _create_output_dir_init(self):
         """
@@ -71,30 +93,36 @@ class Paths:
 
         """
         self._output_dir_path = self.output_dir_path
-        self._lock_file_path = os.path.join(self._output_dir_path, LOCK_FILE_NAME)
+        self._aborted_sim_file_path = os.path.join(self._output_dir_path, ABORTED_SIM_FILE_NAME)
+        self._write_in_progress_file_path = os.path.join(self._output_dir_path, WRITE_IN_PROGRESS_FILE_NAME)
 
         self._validate_output_directory()
 
-        if os.path.isdir(self._output_dir_path):
-            # Clean the output directory and return if create
-            if self._create_clean:
-                # Clear any previous content from the directory
-                for name in os.listdir(self._output_dir_path):
-                    name_path = os.path.join(self._output_dir_path, name)
-                    if name_path != self._lock_file_path:
-                        _rm_anything_recursive(name_path)
-        else:
-            os.makedirs(self._output_dir_path)
-            with open(self._lock_file_path, 'w') as f_lock:
-                f_lock.write("The prescence of this file in the directory allows"
-                             " the Paths library to overwrite the directory's contents.")
+        # Clean the output directory and return if create
+        if self._create_clean:
+            # Clear any previous content from the directory
+            for name in os.listdir(self._output_dir_path):
+                name_path = os.path.join(self._output_dir_path, name)
+                if name_path != self._write_in_progress_file_path:
+                    _rm_anything_recursive(name_path)
 
     def _release_output_dir(self):
         """
         Releases the directory from the control of the paths library by removing the
         lock file.
         """
-        os.remove(self._lock_file_path)
+        os.remove(self._write_in_progress_file_path)
+        self._has_locked_directory = False
+
+    def _perform_cleanup(self, has_exception_happened):
+        self._release_output_dir()
+        if has_exception_happened:
+            with open(self._aborted_sim_file_path, 'w') as aborted_file:
+                aborted_file.write("The presence of this file in the directory indicates that the"
+                                   " directory contains an aborted simulation and thus allows this"
+                                   " directory to be overwritten by the Paths library")
+        self._as_context_manager = False
+
 
     def _validate_as_context_manager(self):
         assert self._as_context_manager, "The Paths class needs to be run as a context manager"
