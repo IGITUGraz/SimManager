@@ -116,7 +116,8 @@ class Paths:
         self._has_locked_directory = False
 
     def _perform_cleanup(self, has_exception_happened):
-        self._release_output_dir()
+        if self._has_locked_directory:
+            self._release_output_dir()
         if has_exception_happened:
             with open(self._aborted_sim_file_path, 'w') as aborted_file:
                 aborted_file.write("The presence of this file in the directory indicates that the"

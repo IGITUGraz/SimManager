@@ -2,6 +2,7 @@ from . import Paths
 import os
 import logging
 import sys
+import traceback
 
 from ._utils import _changed_to_temp_dir, _get_output
 
@@ -11,6 +12,18 @@ except ImportError:  # py2
     from pipes import quote, split
 
 logger = logging.getLogger('sim_manager')
+
+
+class SimManagerError(Exception):
+    pass
+
+
+class CommandLineError(SimManagerError):
+    pass
+
+
+class InvalidRepoStateError(SimManagerError):
+    pass
 
 
 class SimManager:
@@ -43,7 +56,7 @@ class SimManager:
         if not len(stderr_):
             self.repopath = stdout_[:-1]  # remove trailing newline
         else:
-            raise RuntimeError(stderr_)
+            raise CommandLineError(stderr_)
 
     def __enter__(self):
         """
@@ -64,10 +77,14 @@ class SimManager:
         outdirpath = self.paths.output_dir_path
 
         # Create relevant files
-        self.create_simulation_description()
-        self.create_command_file()
-        self.create_commit_id_file()
-        self.create_patch_file()
+        try:
+            self.create_simulation_description()
+            self.create_command_file()
+            self.create_commit_id_file()
+            self.create_patch_file()
+        except (Exception, KeyboardInterrupt) as E:
+            self.paths.__exit__(E.__class__, E, traceback)
+            raise
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -95,7 +112,7 @@ class SimManager:
             if not len(stderr_):
                 return stdout_[:-1]  # remove trailing newline
             else:
-                raise RuntimeError(stderr_)
+                raise CommandLineError(stderr_)
 
     def get_patch(self):
         """
@@ -109,7 +126,7 @@ class SimManager:
             if not len(stderr_):
                 return stdout_
             else:
-                raise RuntimeError(stderr_)
+                raise CommandLineError(stderr_)
 
     def check_no_untracked(self):
         with _changed_to_temp_dir(self.repopath):
@@ -126,28 +143,28 @@ class SimManager:
             stdout_2, _ = _get_output(['perl', '-npe', r's/^(?!In Submodule )(.*)$/    \1/'], input_str=stdout_2)
 
             if stderr_1:
-                raise RuntimeError(stderr_1.decode('utf-8'))
+                raise CommandLineError(stderr_1.decode('utf-8'))
             if stderr_2:
-                raise RuntimeError(stderr_2)
+                raise CommandLineError(stderr_2)
             if stdout_1:
                 print("The following files are untracked in submodules:")
                 print(stdout_2)
-                raise RuntimeError("The repository submodules contain untracked files. Thus, "
-                                   "not take patch as it is likely to miss something I will "
-                                   "important that is not tracked.")
+                raise InvalidRepoStateError("The repository submodules contain untracked files. Thus, "
+                                            "not take patch as it is likely to miss something I will "
+                                            "important that is not tracked.")
 
             # Check for untracked files in the parent repository
             command_args_list = split("""git status --porcelain""")
             stdout_, stderr_1 = _get_output(command_args_list, as_bytes=True)
             stdout_1, stdout_2 = _get_output(['grep', '-Ee', r'^\?\?'], input_str=stdout_)
             if stderr_1:
-                raise RuntimeError(stderr_1.decode('utf-8'))
+                raise CommandLineError(stderr_1.decode('utf-8'))
             if stderr_2:
-                raise RuntimeError(stderr_2)
+                raise CommandLineError(stderr_2)
             if stdout_1:
-                raise RuntimeError('The repository contains untracked files. Thus, I will'
-                                   ' not create patch as it is likely to miss something'
-                                   ' that is nor tracked')
+                raise InvalidRepoStateError('The repository contains untracked files. Thus, I will'
+                                            ' not create patch as it is likely to miss something'
+                                            ' that is nor tracked')
 
     def check_clean(self):
         with _changed_to_temp_dir(self.repopath):
@@ -155,10 +172,10 @@ class SimManager:
 
             if not len(stderr_):
                 if stdout_:
-                    raise RuntimeError("It appears that the working tree is dirty, "
-                                       "Commit/Stash EVERYTHING recursively")
+                    raise InvalidRepoStateError("It appears that the working tree is dirty, "
+                                                "Commit/Stash EVERYTHING recursively")
             else:
-                raise RuntimeError(stderr_)
+                raise CommandLineError(stderr_)
 
     def apply_commit_id(self, commit_id):
         self.check_clean()
