@@ -57,6 +57,18 @@ class Paths:
         # This attempts to create a lock file. Only if it is successful will it assume control of
         # the directory else it will throw an error This is to prevent the directory from being
         # overwritten by parallel running simulations that use the path library.
+
+        if os.path.isdir(self._output_dir_path):
+            if not os.path.isfile(self._aborted_sim_file_path):
+                raise PathsLibraryError(
+                    "The lack of the file .contains_aborted_simulation indicates that the directory {}"
+                    " already exists and contains something other than an aborted simulation. Hence It will"
+                    " not be overridden.".format(self._output_dir_path))
+            else:
+                os.remove(self._aborted_sim_file_path)
+        else:
+            os.makedirs(self._output_dir_path)
+
         try:
             with open(self._write_in_progress_file_path, 'x') as wip_file:
                 wip_file.write("The presence of this file in the directory allows the Paths library"
@@ -70,17 +82,6 @@ class Paths:
                 .format(self._output_dir_path, WRITE_IN_PROGRESS_FILE_NAME))
         else:
             self._has_locked_directory = True
-
-        if os.path.isdir(self._output_dir_path):
-            if not os.path.isfile(self._aborted_sim_file_path):
-                raise PathsLibraryError(
-                    "The lack of the file .contains_aborted_simulation indicates that the directory {}"
-                    " already exists and contains something other than an aborted simulation. Hence It will"
-                    " not be overridden.".format(self._output_dir_path))
-            else:
-                os.remove(self._aborted_sim_file_path)
-        else:
-            os.makedirs(self._output_dir_path)
 
     def _create_output_dir_init(self):
         """
