@@ -3,6 +3,7 @@ from subprocess import Popen, PIPE
 import contextlib
 from shutil import rmtree
 
+
 @contextlib.contextmanager
 def _changed_to_temp_dir(dirname):
     curdir = os.getcwd()
@@ -24,6 +25,7 @@ def _get_output(args, input_str=None, as_bytes=False):
         return stdout_.decode('utf-8'), stderr_.decode('utf-8')
     else:
         return stdout_, stderr_
+
 
 def _rm_anything_recursive(path):
     if not os.path.isdir(path):

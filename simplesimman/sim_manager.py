@@ -1,8 +1,5 @@
-from . import Paths
-import os
 import logging
 import sys
-import traceback
 
 from ._utils import _changed_to_temp_dir, _get_output
 
@@ -14,84 +11,73 @@ except ImportError:  # py2
 logger = logging.getLogger('sim_manager')
 
 
-class SimManagerError(Exception):
+class SimDataManagerError(Exception):
     pass
 
 
-class CommandLineError(SimManagerError):
+class CommandLineError(SimDataManagerError):
     pass
 
 
-class InvalidRepoStateError(SimManagerError):
+class InvalidRepoStateError(SimDataManagerError):
     pass
 
 
-class SimManager:
+class SimDataManager:
     """
     This is a simulation manaager that performs all the drudgery of copying relevant
     stuff to the results folder so that the results are completely reproducible.
     """
 
-    def __init__(self, root_dir_name, param_dict, root_dir_path):
+    def __init__(self, source_repo_path, output_dir_path):
         """
         Create a simulation manager object / context manager.__init__
 
-        :param root_dir_name: Root dir name where all the subdirectories are created
+        :param source_repo_path: This is any path inside the repository
+            containing the code for your simulation
 
-        :param param_dict: Dictionary in the form of dict(paramname1=param1val,
-            paramname2=param2val). See :meth:`Paths.output_dir_path` for where this
-            is used.
-
-        :param root_dir_path: The root dir path where the root dir is created
-
-        NOTE THAT root_dir_name, param_dict, root_dir_path are arguments passed to
-        the Paths class. The corresponding paths object can be accessed through the
-        `paths` member variable
+        :param output_dir_path: The Top-level directory containing all the output
+            of the current simulation. This should be a directory that already
+            exists
         """
 
-        self.paths = Paths(root_dir_name=root_dir_name, param_dict=param_dict, root_dir_path=root_dir_path,
-                           create_clean=True)
-        stdout_, stderr_ = _get_output(['git', 'rev-parse', '--show-toplevel'])
+        self.output_dir_path = output_dir_path
+
+        with _changed_to_temp_dir(source_repo_path):
+            stdout_, stderr_ = _get_output(['git', 'rev-parse', '--show-toplevel'])
 
         if not len(stderr_):
             self.repopath = stdout_[:-1]  # remove trailing newline
         else:
             raise CommandLineError(stderr_)
 
-    def __enter__(self):
+    def create_simulation_data(self):
         """
-        Here we call the relevant shell script and store its output
+        This is the most important function. This creates all the relevant data
+        required to reproduce the simulation and writes it into 4 files in the
+        output directory
 
-        Perform the following sequence of actions:
+        1.  DESCRIPTION.yaml - This file is an empty YAML That contains 4 fields:
+            title, reason, result, keywords. These can be used to record any data
+            that you wish regarding this particular experiment
 
-        check if the directory doesnt already contain a simulation
-        if not, store commit ID and diff and YAML template for a description
+        2.  .command - This contains the command that was used to run the current
+            simulation. Note that it is conspicuously missing the python executable
+            as it is built from the values contained in sys.argv
+
+        3.  .commit_id - This contains the commit ID that is currently checked out
+            in the repository
+
+        4.  .patch - This contains the diff of the entire repository. Note that the
+            diff is taken using a special script that takes diffs and recursively
+            across submodules.
         """
-
-        # Check if the given directory is valid. Note that this code is no longer
-        # relevant for any directories created from now on. This only exists so that
-        # directories created with previous versions are not overwritten
-
-        self.paths.__enter__()
-
-        outdirpath = self.paths.output_dir_path
 
         # Create relevant files
-        try:
-            self.create_simulation_description()
-            self.create_command_file()
-            self.create_commit_id_file()
-            self.create_patch_file()
-        except (Exception, KeyboardInterrupt) as E:
-            self.paths.__exit__(E.__class__, E, traceback)
-            raise
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        """
-        Here we lock the directory by creating a lock file
-        """
-        return self.paths.__exit__(exc_type, exc_value, traceback)
+        self.create_simulation_description()
+        self.create_command_file()
+        self.create_commit_id_file()
+        self.create_patch_file()
 
     def get_command(self):
         """
@@ -192,17 +178,17 @@ class SimManager:
         yaml_file_string += ["reason: |"]
         yaml_file_string += ["result: |"]
         yaml_file_string += ["keywords: |"]
-        with _changed_to_temp_dir(self.paths.output_dir_path):
+        with _changed_to_temp_dir(self.output_dir_path):
             with open('DESCRIPTION.yaml', 'w') as desc_file:
                 desc_file.write('\n'.join(yaml_file_string))
 
     def create_command_file(self):
-        with _changed_to_temp_dir(self.paths.output_dir_path):
+        with _changed_to_temp_dir(self.output_dir_path):
             with open('.command', 'w') as command_file:
                 command_file.write(self.get_command())
 
     def create_commit_id_file(self):
-        with _changed_to_temp_dir(self.paths.output_dir_path):
+        with _changed_to_temp_dir(self.output_dir_path):
             with open('.commit_id', 'w') as commit_id_file:
                 commit_id_file.write(self.get_commit_id())
 
@@ -211,7 +197,7 @@ class SimManager:
         Creates a file storing the diff patch.
         """
 
-        with _changed_to_temp_dir(self.paths.output_dir_path):
+        with _changed_to_temp_dir(self.output_dir_path):
             with open('.patch', 'w') as patch_file:
                 patch_file.write(self.get_patch())
 
@@ -220,7 +206,7 @@ class SimManager:
         Creates a lock file to signify the successful completion of a simulation
         thereby preventing further writes into the same directory
         """
-        with _changed_to_temp_dir(self.paths.output_dir_path):
+        with _changed_to_temp_dir(self.output_dir_path):
             with open('.sim_manager_write_locked', 'w') as lock_file:
                 lock_file.write("THIS FOLDER WILL NOT BE WRITTEN TO BY SIM "
                                 "MANAGER DUE TO THE PRESCENCE OF THIS FILE")

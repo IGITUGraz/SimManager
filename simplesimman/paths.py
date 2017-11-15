@@ -3,13 +3,9 @@ from collections import OrderedDict
 
 import re
 
-import itertools
-from ._utils import _rm_anything_recursive
+from sim_manager import SimDataManager, SimDataManagerError
 
 __author__ = 'anand'
-
-ABORTED_SIM_FILE_NAME = '.contains_aborted_simulation'
-WRITE_IN_PROGRESS_FILE_NAME = '.write_in_progress'
 
 
 class PathsLibraryError(Exception):
@@ -17,125 +13,137 @@ class PathsLibraryError(Exception):
 
 
 class Paths:
+    """
+    This is the class that is used to manage the directories involved in the storage of
+    simulation output.
 
-    def __init__(self, root_dir_name, param_dict, suffix="", root_dir_path='./results', create_clean=False):
+    The essence of the path management scheme used by the Paths library lies in the
+    concept of an output directory. The output directory is the directory into
+    which all the output from the current simulation should go.
+
+    It can contain the following subdirectories (whose path's and creation are handled
+    by the corresponding properties)
+
+    1.  `simulation` - This directory contains the raw data that we deem to be the
+                       result of the simulation
+
+    2.  `logs` - This is the data containing the output logs from the simulation
+
+    3.  `data` - This contains any intermediate data files that are repeatedly used
+                 over the course of the simulation. Honestly the distinction between
+                 the simulation and data directory lies in the eyes of the simulator
+
+    4.  `results` - This directory is not used during the simulation. Rather this is
+                    used to hold the results of the analysis of the simulation.
+
+    The Paths class can be instantiated in one of 2 ways
+
+    1.  Via the `Paths.create_new()` function.
+        e.g. ``paths = Paths.create_new(...)``
+
+    2.  Via the `Paths.from_existing()` function
+        e.g. ``paths = Paths.from_existing(...)``
+
+    Using the __init__ function (i.e. ``paths = Paths(...)``) is identical to using
+    `Paths.create_new()`. See the documentation of the above functions for further
+    details regarding the Paths instances created in that way.
+    """
+
+    def __init__(self, root_dir_name, root_dir_parent, source_dir='.', suffix="", param_dict={}):
+        self.__dict__ = Paths.create_new(root_dir_name=root_dir_name,
+                                         root_dir_parent=root_dir_parent,
+                                         suffix=suffix,
+                                         param_dict=param_dict).__dict__.copy()
+
+    @classmethod
+    def from_existing(cls, output_dir_path, suffix=""):
         """
-        Manages generating paths for various cases
+        This returns a Paths object whose `output_dir_path` is assigned to the
+        parameter `output_dir_path`.
+        """
+        self = cls.__new__()
+        if not os.path.isdir(output_dir_path):
+            raise PathsLibraryError('The path {} passed to Paths.from_existing() does not exist'
+                                    .format(output_dir_path))
+        self._output_dir_path = output_dir_path
+        self._suffix = suffix
+        self._from_existing = True
+        return self
 
-        :param root_dir_name: Root dir name where all the subdirectories are created
+    @classmethod
+    def create_new(cls, root_dir_name, root_dir_parent, source_dir='.', suffix="", param_dict={}):
+        """
+        This creates a new output directory specified by the parameters above and
+        creates a Paths instance associated with it. It also creates all the
+        information responsible to reproduce the current simulation and stores it in
+        the directory. (look at :meth:`~simplesimman.SimDataManager.create_simulation_data`
+        for more details). To see how the output directory is calculated, look at the
+        documentation of the `Paths.output_dir_path` property.
+
+        :param root_dir_name: Name of the root directory
+        :param root_dir_parent: The directory within which the root directory is created.
+        :param source_dir: This should be a directory that is a subdirectory of the
+            source repository. By default it takes the value of the current working
+            directory.
         :param param_dict: Dictionary in the form of dict(paramname1=param1val, paramname2=param2val).
-            See :meth:`Paths.output_dir_path` for where this is used.
+            See :meth:`Paths.output_dir_path` for where this is used. Default is empty
         :param suffix: Suffix used for various output files
-        :param root_dir_path: The root dir path where the root dir is created
-        :param create_clean: The output directory when created is created clean/empty with all previous
-            content removed.
+
+        A paths object vreated using create_new is to be used to store simulation
+        results in the simulation, data, and logs subdirectories
         """
+        self = cls.__new__()
+        self._from_existing = False
         self._root_dir_name = root_dir_name
-        self._root_dir_path = root_dir_path
-        if not os.path.exists(root_dir_path):
-            raise PathsLibraryError("{} does not exit. Please create it.".format(root_dir_path))
+        self._root_dir_path = root_dir_parent
+        if not os.path.exists(root_dir_parent):
+            raise PathsLibraryError("{} does not exist. Please create it.".format(root_dir_parent))
         self._suffix = suffix
         self._param_combo = order_dict_alphabetically(param_dict)
-        self._create_clean = bool(create_clean)
-        self._has_locked_directory = False
 
-    def __enter__(self):
-        self._as_context_manager = True
-        self._create_output_dir_init()
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        """
-        Here we release our control of the directory by deleting the lock file.
-        """
-        self._perform_cleanup(exc_type is not None)
-
-    def _validate_output_directory(self):
-        """
-        This function validates the directory, secures write access and returns if it succeeded
-        else it throws a PathsLibraryError
-        """
-        # This attempts to create a lock file. Only if it is successful will it assume control of
-        # the directory else it will throw an error This is to prevent the directory from being
-        # overwritten by parallel running simulations that use the path library.
-
-        if os.path.isdir(self._output_dir_path):
-            if not os.path.isfile(self._aborted_sim_file_path):
-                raise PathsLibraryError(
-                    "The lack of the file .contains_aborted_simulation indicates that the directory {}"
-                    " already exists and contains something other than an aborted simulation. Hence It will"
-                    " not be overridden.".format(self._output_dir_path))
-            else:
-                os.remove(self._aborted_sim_file_path)
-        else:
-            os.makedirs(self._output_dir_path)
-
+        self._aquire_output_dir()
         try:
-            with open(self._write_in_progress_file_path, 'x') as wip_file:
-                wip_file.write("The presence of this file in the directory allows the Paths library"
-                               " that created this file to write into the directory in a multi-threading"
-                               " safe manner. This file is deleted at the end of the simulations"
-                               " whether there's an exception or not")
-        except FileExistsError:
-            raise PathsLibraryError(
-                "It appears that the directory {} already exists and is being written"
-                " currently by another simulation. Cannot create file {}"
-                .format(self._output_dir_path, WRITE_IN_PROGRESS_FILE_NAME))
-        else:
-            self._has_locked_directory = True
+            self._store_sim_reproduction_data()
+        except SimDataManagerError as E:
+            os.rmdir(self._output_dir_path)
+            raise
 
-    def _create_output_dir_init(self):
+        return self
+
+    def _aquire_output_dir(self):
         """
-        Create the output directory for the first time and register it. If directory
-        already exists and is not registered as managed by Paths, raise a
-        :class:`PathsLibraryError` complaining about this.
-
-        The .sim_manager_locked_file thing is just so that directories created with
-        the previous version are not overwritten
-
+        Create a new output directory for the first time and store simulation data
+        in it. If directory already exists, raise a :class:`PathsLibraryError`
+        complaining about this.
         """
         self._output_dir_path = self.output_dir_path
-        self._aborted_sim_file_path = os.path.join(self._output_dir_path, ABORTED_SIM_FILE_NAME)
-        self._write_in_progress_file_path = os.path.join(self._output_dir_path, WRITE_IN_PROGRESS_FILE_NAME)
+        try:
+            os.makedirs(self._output_dir_path)
+        except OSError:
+            raise PathsLibraryError("It appears that the output directory {} already exists."
+                                    "Therefore It cannot be created".format(self._output_dir_path))
 
-        self._validate_output_directory()
-
-        # Clean the output directory and return if create
-        if self._create_clean:
-            # Clear any previous content from the directory
-            for name in os.listdir(self._output_dir_path):
-                name_path = os.path.join(self._output_dir_path, name)
-                if name_path != self._write_in_progress_file_path:
-                    _rm_anything_recursive(name_path)
-
-    def _release_output_dir(self):
+    def _store_sim_reproduction_data(self, source_repo_dir='.'):
         """
-        Releases the directory from the control of the paths library by removing the
-        lock file.
+        Stores the relevant simulation data into the data directory
+
+        :param source_repo_dir: The diff is taken of the repository containing the source_repo_dir
+
+        May Raise a SimDataManagerError if the creation of data fails
         """
-        os.remove(self._write_in_progress_file_path)
-        self._has_locked_directory = False
-
-    def _perform_cleanup(self, has_exception_happened):
-        if self._has_locked_directory:
-            self._release_output_dir()
-        if has_exception_happened:
-            with open(self._aborted_sim_file_path, 'w') as aborted_file:
-                aborted_file.write("The presence of this file in the directory indicates that the"
-                                   " directory contains an aborted simulation and thus allows this"
-                                   " directory to be overwritten by the Paths library")
-        self._as_context_manager = False
-
-
-    def _validate_as_context_manager(self):
-        assert self._as_context_manager, "The Paths class needs to be run as a context manager"
+        sim_man = SimDataManager(source_repo_path=source_repo_dir, output_dir_path=self._output_dir_path)
+        sim_man.create_simulation_data()
 
     @property
     def root_dir_path(self):
         """
-        Get the full path of the root directory
+        Get the path of the directory containing the output directory
         :return:
         """
-        return os.path.join(self._root_dir_path, self._root_dir_name)
+        if self._from_existing:
+            return os.path.dirname(self._output_dir_path)
+        else:
+            return os.path.join(self._root_dir_path, self._root_dir_name)
 
     @property
     def output_dir_path(self):
@@ -144,14 +152,12 @@ class Paths:
         /root_dir_path/root_dir_name/param1name-param1val-param2name-param2val. The
         parameter names are sorted in alphabetical order in the leaf directory
         name.
-        
-        :return: The output directory. If the output directory has not yet been
-            created, then it is created as create_output_dir(exist_ok=False) and
-            then returned. This is so that the command is not destructive.
-        """
 
-        self._validate_as_context_manager()
-        return os.path.join(self.root_dir_path, make_param_string(**self._param_combo))
+        :return: The output directory. Note that no creation of the directory
+            happens here. If you intend to create the output directory then call
+            initialize_output_dir.
+        """
+        return self._output_dir_path
 
     # The functions that should actually be used are below
     @property
@@ -161,7 +167,6 @@ class Paths:
         /root_dir_path/root_dir_name/param1name-param1val-param2name-param2val/results
         :return:
         """
-        self._validate_as_context_manager()
         path = os.path.join(self.output_dir_path, "results")
         if not os.path.isdir(path):
             os.mkdir(path)
@@ -172,7 +177,6 @@ class Paths:
         """
         Get the path of the logging directory, creating it  if necesssary
         """
-        self._validate_as_context_manager()
         path = os.path.join(self.output_dir_path, "logs")
         if not os.path.isdir(path):
             os.mkdir(path)
@@ -185,7 +189,6 @@ class Paths:
         /root_dir_path/root_dir_name/param1name-param1val-param2name-param2val/simulation
         :return:
         """
-        self._validate_as_context_manager()
         path = os.path.join(self.output_dir_path, "simulation")
         if not os.path.isdir(path):
             os.mkdir(path)
@@ -198,7 +201,6 @@ class Paths:
         /root_dir_path/root_dir_name/param1name-param1val-param2name-param2val/data
         :return:
         """
-        self._validate_as_context_manager()
         path = os.path.join(self.output_dir_path, "data")
         if not os.path.isdir(path):
             os.mkdir(path)
@@ -211,10 +213,8 @@ class Paths:
         /root_dir_path/root_dir_name/param1name-param1val-param2name-param2val/results/{name}-{param-paramval*}-{kwarg-kwargval*}.ext
         :return:
         """
-        self._validate_as_context_manager()
-        d = self._param_combo.copy()
-        d.update(kwargs)
-        return os.path.join(self.results_path, "{}-{}{}.{}".format(name, make_param_string(**d), self._suffix, ext))
+        param_string = make_param_string(**kwargs)
+        return os.path.join(self.results_path, "{}-{}-{}.{}".format(name, param_string, self._suffix, ext))
 
 
 def make_param_string(delimiter='-', **kwargs):
@@ -251,71 +251,3 @@ def order_dict_alphabetically(d):
         assert key not in od
         od[key] = d[key]
     return od
-
-
-def dict_product(dicts):
-    return (dict(zip(dicts, x)) for x in itertools.product(*dicts.values()))
-
-
-class PathsMap:
-
-    def __init__(self, param_lists, args_name, n_networks, suffix, root_dir_path='./results'):
-        """
-        This class manages groups of paths for larger simulations of different parameter combinations since each
-        :class:`~ltl.paths.Path` above only manages one parameter combination.
-        :param param_lists:
-        :param args_name:
-        :param n_networks:
-        :param suffix:
-        """
-        self._root_dir_name = args_name
-        self._root_dir_path = root_dir_path
-        self._suffix = suffix
-
-        param_lists.update(dict(network_num=range(n_networks)))
-        self.param_lists = param_lists
-
-        list_dict = dict_product(param_lists)
-        self.paths_map = {}
-        for param_combo in list_dict:
-            key = tuple(order_dict_alphabetically(param_combo).items())
-            assert key not in self.paths_map
-            self.paths_map[key] = Paths(args_name, param_combo, suffix)
-
-    @property
-    def paths_list(self):
-        return list(self.paths_map.values())
-
-    def get(self, **kwargs):
-        param_combo = kwargs
-        key = tuple(order_dict_alphabetically(param_combo).items())
-        return self.paths_map[key]
-
-    def filter(self, **kwargs):
-        filtered_list = []
-        for key, paths in self.paths_map.items():
-            params_combo = OrderedDict(key)
-            for param_name, param_value in kwargs.items():
-                if params_combo[param_name] != param_value:
-                    break
-            else:
-                filtered_list.append(paths)
-
-        return filtered_list
-
-    # Aggregate reults paths
-    @property
-    def root_dir_path(self):
-        return os.path.join(self._root_dir_path, self._root_dir_name)
-
-    @property
-    def agg_results_path(self):
-        path = os.path.join(self.root_dir_path, "results")
-        os.makedirs(path, exist_ok=True)
-        return path
-
-    def get_agg_fpath(self, name, param_combo, ext, **kwargs):
-        d = param_combo.copy()
-        d.update(kwargs)
-        return os.path.join(self.agg_results_path, "{}-{}{}.{}"
-                            .format(name, make_param_string(**d), self._suffix, ext))
