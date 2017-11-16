@@ -1,4 +1,5 @@
 from timeit import default_timer as timer
+import logging
 
 
 class Timer:
@@ -6,37 +7,78 @@ class Timer:
     The instances of this class can be used as context managers which can be used
     to profile sections of the code. An example usage is::
 
+        from simmanager.tools.timer import Timer
+        import logging
+        import sys
+
+        logging.basicConfig(stream=sys.stdout, level='DEBUG')
+        logger = logging.getLogger('timer_info')
+
         my_timer = Timer(logger, 'INFO')
-        with my_timer("Creating a list of 10000 elements"):
+        n_elems = 100000
+        with my_timer("Creating a list of {} elements".format(n_elems)):
             my_list = []
-            for i in range(10000):
+            for i in range(n_elems):
                 my_list.append(i)
+
+    This causes the following output::
+
+        INFO:timer_info:Creating a list of 100000 elements took 0.0150 s
 
     In the above example we create a timer object `my_timer` associated to the
     logger `logger`. We also specify the log level used to output the profiling
     result (in this case 'INFO'). Then we use the object in the with statement by
     calling it with a string that describes the section of code that is being
-    profiled (henceforth called the `section name`).
+    profiled (henceforth called the `section name`). This causes a log message of
+    the form `<section_name> took <profile_time> s` to be output at the end of the
+    section.
 
-    The above use causes the following log message output at the specified log
-    level at the end of the code block::
+    NOTE: The timer contexts CAN BE NESTED. i.e. the following example is a valid
+    use of `my_timer`::
 
-        <logger related information> Creating a list of 10000 elements took NTW s
+        from simmanager.tools.timer import Timer
+        import logging
+        import sys
 
-    The message takes the form `<section_name> took <profile_time> s`
+        logging.basicConfig(stream=sys.stdout, level='DEBUG')
+        logger = logging.getLogger('timer_info')
+
+        my_timer = Timer(logger, 'INFO')
+        n_elems = 100000
+        with my_timer("Creating a list of {} elements".format(n_elems)):
+            my_list = []
+            with my_timer("Adding First {} elements in list".format(n_elems//2)):
+                for i in range(n_elems//2):
+                    my_list.append(i)
+            with my_timer("Adding Second {} elements in list".format(n_elems//2)):
+                for i in range(n_elems//2):
+                    my_list.append(i)
+
+    This causes the following output::
+
+        INFO:timer_info:Adding First 50000 elements in list took 0.0079 s
+        INFO:timer_info:Adding Second 50000 elements in list took 0.0076 s
+        INFO:timer_info:Creating a list of 100000 elements took 0.0157 s
+
+    NOTE that the output is in the order of the ending times of the respective contexts
 
     Also, the timer object maintains a **list of profile results**. For every use
     in a with statement, a tuple `(section_name, profile_tim)` is recorded in the
     list. The items in the list are chronologically sorted w.r.t the time of
     finishing of the respective code sections. This enables aggregating profile
     results. This list of tuples is accessable in the member `profile_list`. For
-    example, in the above example, ``my_timer.profile_list`` would be a list
-    containing a single tuple ``("Creating a list of 10000 elements", NTW)``
+    example, if we consider the second example above (i.e. nested contexts), the
+    value of ``my_timer.profile_list`` is as below::
+
+        [('Adding First 50000 elements in list', 0.007867546984925866),
+         ('Adding Second 50000 elements in list', 0.007617355091497302),
+         ('Creating a list of 100000 elements', 0.015676741022616625)]
+
 
     :param logger: This is the python logger object that is used to log the profile
         results. Can be `None` (Default), in which case the profiler will not log any
-        messages i.e. The profile results are only stored in profile_list but not
-        displayed
+        messages (i.e. The profile results are only stored in profile_list but not
+        displayed)
 
     :param log_level: This is used to specify a log level to use when logging the
         messages of the logger
@@ -49,7 +91,11 @@ class Timer:
         self._section_start_stack = []
         self._section_counter = 0
         self._logger = logger
-        self._log_level = log_level
+
+        if str(log_level) == log_level:
+            self._log_level = logging.getLevelName(log_level)
+        elif isinstance(log_level, int):
+            self._log_level = log_level
 
     def __call__(self, section_name):
         """
