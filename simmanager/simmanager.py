@@ -1,5 +1,4 @@
 import os
-from collections import OrderedDict
 
 from simdatamanager import SimDataManager, SimDataManagerError
 from paths import Paths
