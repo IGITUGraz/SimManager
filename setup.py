@@ -4,17 +4,18 @@ Note that it does not perform any installation of the documentation. For this, f
  README
 """
 
-from setuptools import setup
-from simplesimman import __version__
+from setuptools import setup, find_packages
+from simmanager import __version__
 
 setup(
-    name="SimpleSimManager",
+    name="SimManager",
     version=__version__,
-    packages=['simplesimman'],
+    packages=find_packages('/ltl'),
     author="Anand Subramoney, Arjun Rao",
     author_email="anand@igi.tugraz.at, arjun@igi.tugraz.at",
-    description="This module provides the interface for some quick code to record results "
-                "and make code reproducible. It is dependent on the availability of the "
-                "git executable on the system.",
-    provides=['simplesimman'],
+    description="This module provides the interface for some quick code to record results and make"
+                " code reproducible. It also contains some handy tools that are used often like"
+                " timers and stdout redirection. It is dependent on the availability of the git"
+                " executable on the system path",
+    provides=['simmanager'],
 )

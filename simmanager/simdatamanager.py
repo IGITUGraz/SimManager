@@ -25,8 +25,8 @@ class InvalidRepoStateError(SimDataManagerError):
 
 class SimDataManager:
     """
-    This is a simulation manaager that performs all the drudgery of copying relevant
-    stuff to the results folder so that the results are completely reproducible.
+    This is a wrapper around the functions responsible for generating and storing
+    the data relevant to reproducing a simulation
     """
 
     def __init__(self, source_repo_path, output_dir_path):
