@@ -1,12 +1,12 @@
 import os
 
-from simdatamanager import SimDataManager, SimDataManagerError
-from paths import Paths
-from _utils import _rm_anything_recursive
-from _utils import _get_output
+from .simdatamanager import SimDataManager, SimDataManagerError
+from .paths import Paths
+from ._utils import _rm_anything_recursive
+from ._utils import _get_output
 
-from _utils import make_param_string
-from _utils import order_dict_alphabetically
+from ._utils import make_param_string
+from ._utils import order_dict_alphabetically
 
 __author__ = 'anand'
 
@@ -29,12 +29,12 @@ class SimManager:
     The simulation manager does the following:
 
     1.  On entering the context it attempts to create a directory by the name of
-        ``<root_dir>/<sim_name>/paramname1-paramvalue1-paramname2-paramvalue2.. .`` If
+        ``<root_dir>/<sim_name>/paramname1-paramvalue1-paramname2-paramvalue2..`` . If
         it is successful then it creates a :class:`~simmanager.paths.Paths` instance
         that uses the above path as the output directory. See the
         :class:`~simmanager.paths.Paths` class for more details. This paths object can
         be accessed via the `paths` property. If it cannot create the directory, it
-        raises an exception
+        raises a SimManagerError.
 
     2.  After creating the directory, the SimManager creates 4 files in the output
         directory that contain all the information necessary to reproduce the
@@ -119,20 +119,29 @@ class SimManager:
         Get the path of the directory containing the output directory
         :return:
         """
-        return self._paths
+        if hasattr(self, '_paths'):
+            return self._paths
+        else:
+            raise SimManagerError("It appears as though the output directory has not"
+                                  " been created. This is possibly because the SimManager"
+                                  " has not been used as a context manager.")
 
     @property
     def sim_name(self):
         """
-        Get the path of the directory containing the output directory
-        :return:
+        Get the simulation name. Note that the output directory is
+        ``<root_dir>/<sim_name>/paramname1-paramvalue1-paramname2-paramvalue2..``
+
+        :return: The simulation name
         """
         return self._sim_name
 
     @property
     def root_dir(self):
         """
-        Get the path of the directory containing the output directory
-        :return:
+        Get the path of the root directory in which the results are stored. Note that
+        the output directory is
+        ``<root_dir>/<sim_name>/paramname1-paramvalue1-paramname2-paramvalue2..``
+        :return: The root directory
         """
         return self._root_dir
