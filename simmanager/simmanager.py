@@ -69,7 +69,6 @@ class SimManager:
             raise SimManagerError("The root directory {} does not exist. Please create it.".format(root_dir))
         self._suffix = suffix
         self._param_combo = order_dict_alphabetically(param_dict)
-        self._as_context_manager = False
 
     def __enter__(self):
         output_dir_path = self._aquire_output_dir()
@@ -77,15 +76,14 @@ class SimManager:
         try:
             self._store_sim_reproduction_data()
         except SimDataManagerError as E:
-            _rm_anything_recursive(self._output_dir_path)
+            _rm_anything_recursive(output_dir_path)
             raise
-        self._as_context_manager = True
+        return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         _get_output(['chmod', '-R', 'a-w', self._paths.data_path])
         _get_output(['chmod', '-R', 'a-w', self._paths.simulation_path])
         _get_output(['chmod', '-R', 'a-w', self._paths.log_path])
-        self._as_context_manager = False
 
     def _aquire_output_dir(self):
         """
@@ -98,7 +96,7 @@ class SimManager:
             os.makedirs(output_dir_path)
         except OSError:
             raise SimManagerError("It appears that the output directory {} already exists."
-                                  "Therefore It cannot be created".format(self._output_dir_path))
+                                  "Therefore It cannot be created".format(output_dir_path))
         return output_dir_path
 
     def _store_sim_reproduction_data(self, source_repo_dir='.'):

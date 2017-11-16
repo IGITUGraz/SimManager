@@ -85,7 +85,6 @@ class SimDataManager:
         defined in the main file of the simulation
         """
         command_args_list = []
-        print(sys.argv)
 
         for arg in sys.argv:
             command_args_list.append(quote(arg))
