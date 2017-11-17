@@ -10,7 +10,7 @@ from simmanager import __version__
 setup(
     name="SimManager",
     version=__version__,
-    packages=find_packages('/simmanager'),
+    packages=find_packages(),
     scripts=['scripts/subpatch.sh'],
     author="Anand Subramoney, Arjun Rao",
     author_email="anand@igi.tugraz.at, arjun@igi.tugraz.at",
