@@ -11,6 +11,7 @@ setup(
     name="SimManager",
     version=__version__,
     packages=find_packages('/simmanager'),
+    scripts=['scripts/subpatch.sh'],
     author="Anand Subramoney, Arjun Rao",
     author_email="anand@igi.tugraz.at, arjun@igi.tugraz.at",
     description="This module provides the interface for some quick code to record results and make"
