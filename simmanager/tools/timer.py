@@ -89,6 +89,7 @@ class Timer:
         self.profile_list = []
         self._section_name_stack = []
         self._section_start_stack = []
+        self._section_log_level_stack = []
         self._section_counter = 0
         self._logger = logger
 
@@ -97,11 +98,23 @@ class Timer:
         elif isinstance(log_level, int):
             self._log_level = log_level
 
-    def __call__(self, section_name):
+        self._called_section_name = None
+        self._called_log_level = self._log_level
+
+    def __call__(self, section_name, log_level=None):
         """
         :param section_name: The name of the section being profiled
+        :param log_level: Specifies the log level for the profile message for this
+            particular section. overrides the default log level that was set in the
+            __init__ function (i.e. constructor).
         """
         self._called_section_name = section_name
+        if log_level is None:
+            self._called_log_level = self._log_level
+        elif str(log_level) == log_level:
+            self._called_log_level = logging.getLevelName(log_level)
+        elif isinstance(log_level, int):
+            self._called_log_level = log_level
         return self
 
     def __enter__(self):
@@ -111,15 +124,21 @@ class Timer:
             section_name = "Section {}".format(self._section_counter)
         self._section_name_stack.append(section_name)
         self._section_start_stack.append(timer())
+        self._section_log_level_stack.append(self._called_log_level)
+
+        self._called_section_name = None
+        self._called_log_level = self._log_level
         self._section_counter += 1
         return self
 
     def __exit__(self, *args):
         section_name = self._section_name_stack.pop()
         start = self._section_start_stack.pop()
+        log_level = self._section_log_level_stack.pop()
+
         end = timer()
         interval = end - start
         self.profile_list.append((section_name, interval))
 
         if self._logger is not None:
-            self._logger.log(self._log_level, "%s took %.4f s", section_name, interval)
+            self._logger.log(log_level, "%s took %.4f s", section_name, interval)
