@@ -61,7 +61,7 @@ class SimManager:
 
     """
 
-    def __init__(self, sim_name, root_dir, source_dir='.', param_dict={}, suffix=""):
+    def __init__(self, sim_name, root_dir, source_dir='.', param_dict={}, suffix="", write_protect_dirs=True):
 
         self._sim_name = sim_name
         self._root_dir = root_dir
@@ -69,6 +69,7 @@ class SimManager:
             raise SimManagerError("The root directory {} does not exist. Please create it.".format(root_dir))
         self._suffix = suffix
         self._param_combo = order_dict_alphabetically(param_dict)
+        self._write_protect_dirs = write_protect_dirs
 
     def __enter__(self):
         output_dir_path = self._aquire_output_dir()
@@ -81,9 +82,10 @@ class SimManager:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        _get_output(['chmod', '-R', 'a-w', self._paths.data_path])
-        _get_output(['chmod', '-R', 'a-w', self._paths.simulation_path])
-        _get_output(['chmod', '-R', 'a-w', self._paths.log_path])
+        if self._write_protect_dirs:
+            _get_output(['chmod', '-R', 'a-w', self._paths.data_path])
+            _get_output(['chmod', '-R', 'a-w', self._paths.simulation_path])
+            _get_output(['chmod', '-R', 'a-w', self._paths.log_path])
 
     def _aquire_output_dir(self):
         """
