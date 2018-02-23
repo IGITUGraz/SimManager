@@ -147,6 +147,8 @@ class SimMetadataManager:
             if stderr_2:
                 raise CommandLineError(stderr_2)
             if stdout_1:
+                print("The following files are untracked:")
+                print(stdout_1)
                 raise InvalidRepoStateError('The repository contains untracked files. Thus, I will'
                                             ' not create patch as it is likely to miss something'
                                             ' that is nor tracked')
