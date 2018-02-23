@@ -4,7 +4,9 @@
 
 The Simulation Manager is a library for enabling reproducible scientific simulations. Each time you run your experiment,
 the Simulation Manager automatically stores all the metadata required to re-run the simulation with the same exact
-version of the code. Additionally, it makes sure that you don't accidentally overwrite your results with multiple runs.
+version of the code. Additionally, it makes sure that you don't accidentally overwrite your results with multiple runs. 
+
+
 
 The Simulation Manager also provides various other miscellaneous utilities (see tools_)
 
@@ -13,6 +15,8 @@ therefore is incompatible with Windows
 
 Installation
 ============
+
+SimManager requires git to be installed, and your code to be versioned with git.
 
 Currently this package is not available in PyPI. This means that in order to
 install the latest version, run::
