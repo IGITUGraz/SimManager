@@ -12,9 +12,6 @@ setup(
     scripts=['scripts/subpatch.sh'],
     author="Arjun Rao, Anand Subramoney",
     author_email="arjun@igi.tugraz.at, anand@igi.tugraz.at",
-    description="This module provides the interface for some quick code to record results and make"
-                " code reproducible. It also contains some handy tools that are used often like"
-                " timers and stdout redirection. It is dependent on the availability of the git"
-                " executable on the system path",
+    description="The Simulation Manager is a library for enabling reproducible scientific simulations.",
     provides=['simmanager'],
 )
