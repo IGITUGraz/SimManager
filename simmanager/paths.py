@@ -118,4 +118,7 @@ class Paths:
         :return:
         """
         param_string = make_param_string(**kwargs)
-        return os.path.join(self.results_path, "{}-{}-{}.{}".format(name, param_string, self._suffix, ext))
+        if param_string == "":
+            return os.path.join(self.results_path, "{}-{}.{}".format(name, self._suffix, ext))
+        else:
+            return os.path.join(self.results_path, "{}-{}-{}.{}".format(name, param_string, self._suffix, ext))

@@ -44,9 +44,7 @@ def make_param_string(delimiter='-', **kwargs):
         else:
             value_string = "{}".format(value)
         string_list.append(value_string)
-    param_string = "-".join(string_list)
-    if param_string == "":
-        param_string = "default-output-dir"
+    param_string = delimiter.join(string_list)
     return param_string
 
 

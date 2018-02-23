@@ -99,7 +99,11 @@ class SimManager:
         in it. If directory already exists, raise a :class:`PathsError`
         complaining about this.
         """
-        output_dir_path = os.path.join(self._root_dir, self._sim_name, make_param_string(**self._param_combo))
+        param_string = make_param_string(**self._param_combo)
+        if param_string == "":
+            output_dir_path = os.path.join(self._root_dir, self._sim_name)
+        else:
+            output_dir_path = os.path.join(self._root_dir, self._sim_name, param_string)
         try:
             os.makedirs(output_dir_path)
         except OSError:
