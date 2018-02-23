@@ -1,6 +1,6 @@
 import os
 
-from .simdatamanager import SimDataManager, SimDataManagerError
+from .simmetadatamanager import SimMetadataManager, SimMetadataManagerError
 from .paths import Paths
 from ._utils import _rm_anything_recursive
 from ._utils import _get_output
@@ -76,7 +76,7 @@ class SimManager:
         self._paths = Paths(output_dir_path, suffix=self._suffix)
         try:
             self._store_sim_reproduction_data()
-        except SimDataManagerError as E:
+        except SimMetadataManagerError as E:
             _rm_anything_recursive(output_dir_path)
             raise
         return self
@@ -109,9 +109,9 @@ class SimManager:
 
         May Raise a SimDataManagerError if the creation of data fails
         """
-        sim_man = SimDataManager(source_repo_path=source_repo_dir,
-                                 output_dir_path=self._paths.output_dir_path)
-        sim_man.create_simulation_data()
+        sim_man = SimMetadataManager(source_repo_path=source_repo_dir,
+                                     output_dir_path=self._paths.output_dir_path)
+        sim_man.create_simulation_metadata()
 
     @property
     def paths(self):

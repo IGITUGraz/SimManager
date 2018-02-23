@@ -11,19 +11,19 @@ except ImportError:  # py2
 logger = logging.getLogger('sim_manager')
 
 
-class SimDataManagerError(Exception):
+class SimMetadataManagerError(Exception):
     pass
 
 
-class CommandLineError(SimDataManagerError):
+class CommandLineError(SimMetadataManagerError):
     pass
 
 
-class InvalidRepoStateError(SimDataManagerError):
+class InvalidRepoStateError(SimMetadataManagerError):
     pass
 
 
-class SimDataManager:
+class SimMetadataManager:
     """
     This is a wrapper around the functions responsible for generating and storing
     the data relevant to reproducing a simulation
@@ -51,7 +51,7 @@ class SimDataManager:
         else:
             raise CommandLineError(stderr_)
 
-    def create_simulation_data(self):
+    def create_simulation_metadata(self):
         """
         This is the most important function. This creates all the relevant data
         required to reproduce the simulation and writes it into 4 files in the

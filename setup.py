@@ -1,7 +1,5 @@
 """
-This file installs the ltl package.
-Note that it does not perform any installation of the documentation. For this, follow the specified procedure in the
- README
+This file installs the SimManager package.
 """
 
 from setuptools import setup, find_packages
@@ -12,8 +10,8 @@ setup(
     version=__version__,
     packages=find_packages(),
     scripts=['scripts/subpatch.sh'],
-    author="Anand Subramoney, Arjun Rao",
-    author_email="anand@igi.tugraz.at, arjun@igi.tugraz.at",
+    author="Arjun Rao, Anand Subramoney",
+    author_email="arjun@igi.tugraz.at, anand@igi.tugraz.at",
     description="This module provides the interface for some quick code to record results and make"
                 " code reproducible. It also contains some handy tools that are used often like"
                 " timers and stdout redirection. It is dependent on the availability of the git"
