@@ -2,9 +2,11 @@
  The Simulation Manager
 ========================
 
-This repository contains tools that are useful for manipulating directories,
-storing data necessary to reproduce the simulations, profile code and redirect
-stdout output (even from system level code).
+The Simulation Manager is a library for enabling reproducible scientific simulations. Each time you run your experiment,
+the Simulation Manager automatically stores all the metadata required to re-run the simulation with the same exact
+version of the code. Additionally, it makes sure that you don't accidentally overwrite your results with multiple runs.
+
+The Simulation Manager also provides various other miscellaneous utilities (see tools_)
 
 NOTE: This package relies heavily on unix command line tools (e.g. chmod) and
 therefore is incompatible with Windows
@@ -13,17 +15,31 @@ Installation
 ============
 
 Currently this package is not available in PyPI. This means that in order to
-install it, clone this repository and run the following command from inside the
-repository::
+install the latest version, run::
 
-    pip install .
+    pip install https://github.com/IGITUGraz/SimManager/archive/master.zip
 
 The installation creates the module `simmanager` from which all the tools in the
 package are accesible. It also copies a script file called `subpatch.sh` to the
 system path. The details regarding the script are given below
 
-Tools Contained
-===============
+How to use
+==========
+.. code:: python
+
+    if __name__ == '__main__':
+        # Store your simulation meta-data in the 'output-root-dir/simulation-name/*' and use the paths object to
+        #^ get the location of the directories for data/simulation/results
+        with SimManager("simulation-name", "output-root-dir") as simman:
+            paths = simman.paths  # paths object gives you access to the paths for your simulation/data/results
+                                  # see simmanager.Paths
+            main()  # Run your actual main function with the simulation
+
+
+.. _tools:
+
+Included Tools
+==============
 
 SimManager Class
 ++++++++++++++++
