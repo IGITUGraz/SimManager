@@ -28,11 +28,12 @@ How to use
 .. code:: python
 
     if __name__ == '__main__':
-        # Store your simulation meta-data in the 'output-root-dir/simulation-name/*' and use the paths object to
-        #^ get the location of the directories for data/simulation/results
+        # Store your simulation meta-data in the 'output-root-dir/simulation-name/*' 
+        #^ and use the paths object to get the location of the directories for data/simulation/results
         with SimManager("simulation-name", "output-root-dir") as simman:
-            paths = simman.paths  # paths object gives you access to the paths for your simulation/data/results
-                                  # see simmanager.Paths
+            # paths object gives you access to the paths for your logs/data/results
+            # see simmanager.paths.Paths for documentation
+            paths = simman.paths
             main()  # Run your actual main function with the simulation
 
 
