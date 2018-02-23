@@ -1,5 +1,6 @@
 import os
 
+from simmanager.tools.stdouthandling import stdout_teed
 from .simmetadatamanager import SimMetadataManager, SimMetadataManagerError
 from .paths import Paths
 from ._utils import _rm_anything_recursive
@@ -50,18 +51,17 @@ class SimManager:
     :param sim_name: Simulation Name
     :param root_dir: Root directory containing results. See point 1. above for more
         details
-    :param source_dir: This should be a directory that is a subdirectory of the
-        source repository. By default it takes the value of the current working
-        directory.
     :param param_dict: Dictionary in the form of ``dict(paramname1=param1val, paramname2=param2val)``.
         See point 1. above to see it's usage in creating the output directory.
         Default is an empty dictionary.
     :param suffix: Suffix used for various output files. This is passed on as an
         argument in the creation of the contained Paths object
+    :param write_protect_dirs: Enable/Disable write protecting the directories
+    :param tee_stdx_to: Give file name here to tee the output to the provided file name.
 
     """
 
-    def __init__(self, sim_name, root_dir, source_dir='.', param_dict={}, suffix="", write_protect_dirs=True):
+    def __init__(self, sim_name, root_dir, param_dict={}, suffix="", write_protect_dirs=True, tee_stdx_to=None):
 
         self._sim_name = sim_name
         self._root_dir = root_dir
@@ -70,15 +70,19 @@ class SimManager:
         self._suffix = suffix
         self._param_combo = order_dict_alphabetically(param_dict)
         self._write_protect_dirs = write_protect_dirs
+        self.tee_stdx_to = tee_stdx_to
 
     def __enter__(self):
         output_dir_path = self._aquire_output_dir()
         self._paths = Paths(output_dir_path, suffix=self._suffix)
+        if self.tee_stdx_to is not None:
+            self.stdout_redirected_obj = stdout_teed(os.path.join(self._paths.log_path, self.tee_stdx_to))
         try:
             self._store_sim_reproduction_data()
         except SimMetadataManagerError as E:
             _rm_anything_recursive(output_dir_path)
             raise
+        self.stdout_redirected_obj._on_enter()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -86,6 +90,8 @@ class SimManager:
             _get_output(['chmod', '-R', 'a-w', self._paths.data_path])
             _get_output(['chmod', '-R', 'a-w', self._paths.simulation_path])
             _get_output(['chmod', '-R', 'a-w', self._paths.log_path])
+        self.stdout_redirected_obj._on_exit()
+        return False
 
     def _aquire_output_dir(self):
         """
