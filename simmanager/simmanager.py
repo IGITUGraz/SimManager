@@ -71,6 +71,7 @@ class SimManager:
         self._param_combo = order_dict_alphabetically(param_dict)
         self._write_protect_dirs = write_protect_dirs
         self.tee_stdx_to = tee_stdx_to
+        self.stdout_redirected_obj = None
 
     def __enter__(self):
         output_dir_path = self._aquire_output_dir()
@@ -82,7 +83,8 @@ class SimManager:
         except SimMetadataManagerError as E:
             _rm_anything_recursive(output_dir_path)
             raise
-        self.stdout_redirected_obj._on_enter()
+        if self.stdout_redirected_obj is not None:
+            self.stdout_redirected_obj._on_enter()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -90,7 +92,8 @@ class SimManager:
             _get_output(['chmod', '-R', 'a-w', self._paths.data_path])
             _get_output(['chmod', '-R', 'a-w', self._paths.simulation_path])
             _get_output(['chmod', '-R', 'a-w', self._paths.log_path])
-        self.stdout_redirected_obj._on_exit()
+        if self.stdout_redirected_obj is not None:
+            self.stdout_redirected_obj._on_exit()
         return False
 
     def _aquire_output_dir(self):
