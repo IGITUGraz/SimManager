@@ -41,6 +41,17 @@ How to use
             main()  # Run your actual main function with the simulation
 
 
+For read-only access to the simulation directory for analysis
+
+.. code:: python
+
+    if __name__ == '__main__':
+        # Use the root dir and simulation name where the simulation data is present
+        output_dir_path = os.path.join("output-root-dir", "simulation-name")
+        paths = Paths(output_dir_path)
+        # Do your analysis here ...
+
+
 .. _tools:
 
 Included Tools
