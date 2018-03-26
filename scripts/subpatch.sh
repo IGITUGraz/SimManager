@@ -5,9 +5,9 @@ separator="----8<----8<----8<----8<----"
 
 function make_chunk {
     cd $1
-    if ! git diff-index --quiet HEAD; then
+    if ! git diff-index --quiet HEAD -- . ':(exclude)*.ipynb'; then
         echo "${PWD#$root}/"
-        git diff-index --patch --no-color HEAD
+        git diff-index --patch --no-color HEAD -- . ':(exclude)*.ipynb'
         echo "$separator"
     fi
 }
