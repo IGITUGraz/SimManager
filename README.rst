@@ -27,6 +27,8 @@ The installation creates the module `simmanager` from which all the tools in the
 package are accesible. It also copies a script file called `subpatch.sh` to the
 system path. The details regarding the script are given below
 
+**NOTE:** Make sure the python system path is in ``PATH``. If you're installing the package locally using ``pip install --user``, ``$HOME/.local/bin`` should be in ``PATH``.
+
 How to use
 ==========
 .. code:: python
