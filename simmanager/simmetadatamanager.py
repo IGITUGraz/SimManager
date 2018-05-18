@@ -201,13 +201,3 @@ class SimMetadataManager:
         with _changed_to_temp_dir(self.output_dir_path):
             with open('.patch', 'w') as patch_file:
                 patch_file.write(self.get_patch())
-
-    def create_lock_file(self):
-        """
-        Creates a lock file to signify the successful completion of a simulation
-        thereby preventing further writes into the same directory
-        """
-        with _changed_to_temp_dir(self.output_dir_path):
-            with open('.sim_manager_write_locked', 'w') as lock_file:
-                lock_file.write("THIS FOLDER WILL NOT BE WRITTEN TO BY SIM "
-                                "MANAGER DUE TO THE PRESCENCE OF THIS FILE")

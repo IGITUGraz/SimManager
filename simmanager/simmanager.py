@@ -122,9 +122,9 @@ class SimManager:
 
         May Raise a SimDataManagerError if the creation of data fails
         """
-        sim_man = SimMetadataManager(source_repo_path=source_repo_dir,
-                                     output_dir_path=self._paths.output_dir_path)
-        sim_man.create_simulation_metadata()
+        sim_metadata_man = SimMetadataManager(source_repo_path=source_repo_dir,
+                                              output_dir_path=self._paths.output_dir_path)
+        sim_metadata_man.create_simulation_metadata()
 
     @property
     def paths(self):
