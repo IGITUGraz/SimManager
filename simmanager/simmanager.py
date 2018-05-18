@@ -3,6 +3,8 @@ import os
 from simmanager.tools.stdouthandling import stdout_teed
 from .simmetadatamanager import SimMetadataManager, SimMetadataManagerError
 from .paths import Paths
+import subprocess
+import shlex
 from ._utils import _rm_anything_recursive
 from ._utils import _get_output
 
@@ -58,10 +60,12 @@ class SimManager:
         argument in the creation of the contained Paths object
     :param write_protect_dirs: Enable/Disable write protecting the directories
     :param tee_stdx_to: Give file name here to tee the output to the provided file name.
-
+    :param open_desc_for_edit: Boolean flag. if this is true, Python will open the
+        simulation description file to type in the description of the experiment
+        upon creation of the file
     """
 
-    def __init__(self, sim_name, root_dir, param_dict={}, suffix="", write_protect_dirs=True, tee_stdx_to=None):
+    def __init__(self, sim_name, root_dir, param_dict={}, suffix="", write_protect_dirs=True, tee_stdx_to=None, open_desc_for_edit=False):
 
         self._sim_name = sim_name
         self._root_dir = root_dir
@@ -71,6 +75,7 @@ class SimManager:
         self._param_combo = order_dict_alphabetically(param_dict)
         self._write_protect_dirs = write_protect_dirs
         self.tee_stdx_to = tee_stdx_to
+        self.open_desc_for_edit = open_desc_for_edit
         self.stdout_redirected_obj = None
 
     def __enter__(self):
@@ -81,6 +86,14 @@ class SimManager:
         try:
             self._store_sim_reproduction_data()
         except SimMetadataManagerError as E:
+            _rm_anything_recursive(output_dir_path)
+            raise
+        try:
+            if self.open_desc_for_edit:
+                description_file = os.path.join(self.paths.output_dir_path, 'DESCRIPTION.yaml')
+                editor = os.environ.get('EDITOR', 'vim')
+                subprocess.call(shlex.split(editor) + [description_file])
+        except Exception:
             _rm_anything_recursive(output_dir_path)
             raise
         if self.stdout_redirected_obj is not None:
