@@ -62,7 +62,8 @@ class SimManager:
     :param tee_stdx_to: Give file name here to tee the output to the provided file name.
     :param open_desc_for_edit: Boolean flag. if this is true, Python will open the
         simulation description file to type in the description of the experiment
-        upon creation of the file
+        upon creation of the file. The command used to launch the editor is taken
+        from the EDITOR environment variable. It defaults to vim.
     """
 
     def __init__(self, sim_name, root_dir, param_dict={}, suffix="", write_protect_dirs=True, tee_stdx_to=None, open_desc_for_edit=False):
