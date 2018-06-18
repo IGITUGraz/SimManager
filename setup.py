@@ -9,7 +9,7 @@ setup(
     name="SimManager",
     version=__version__,
     packages=find_packages(),
-    scripts=['scripts/subpatch.sh'],
+    scripts=['scripts/subpatch.sh', 'scripts/checkoutsim.sh'],
     author="Arjun Rao, Anand Subramoney",
     author_email="arjun@igi.tugraz.at, anand@igi.tugraz.at",
     description="The Simulation Manager is a library for enabling reproducible scientific simulations.",

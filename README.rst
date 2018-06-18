@@ -106,3 +106,16 @@ script is as follows::
 Note that in order to patch a repository it is necessary that it is checked out to
 the commit on which the patch was created. If there are any submodules it is
 necessary that they too are checked out to the correct commit id's.
+
+checkoutsim.sh
+++++++++++++++
+
+This script can be used to checkout a particular simulation. usage of the script is
+as follows::
+
+    checkoutsim.sh /simulation/output/directory
+
+This script must be run from the directory which is inside the repository containing
+the code for the simulation being checked out. For more help type ``checkoutsim.sh``
+without any arguments
+
