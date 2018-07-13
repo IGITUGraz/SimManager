@@ -33,6 +33,7 @@ How to use
 ==========
 .. code:: python
 
+    from simmanager import SimManager
     if __name__ == '__main__':
         # Store your simulation meta-data in the 'output-root-dir/simulation-name/*' 
         #^ and use the paths object to get the location of the directories for data/simulation/results
@@ -47,6 +48,8 @@ For read-only access to the simulation directory for analysis
 
 .. code:: python
 
+    import os
+    from simmanager import Paths
     if __name__ == '__main__':
         # Use the root dir and simulation name where the simulation data is present
         output_dir_path = os.path.join("output-root-dir", "simulation-name")
