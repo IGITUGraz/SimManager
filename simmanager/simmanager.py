@@ -60,6 +60,8 @@ class SimManager:
         argument in the creation of the contained Paths object
     :param write_protect_dirs: Enable/Disable write protecting the directories
     :param tee_stdx_to: Give file name here to tee the output to the provided file name.
+        A file with the name specified in this argument is created in the `logs`
+        sub-directory and used to tee the output to.
     :param open_desc_for_edit: Boolean flag. if this is true, Python will open the
         simulation description file to type in the description of the experiment
         upon creation of the file. The command used to launch the editor is taken
