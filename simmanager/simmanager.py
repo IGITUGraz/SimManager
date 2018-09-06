@@ -84,8 +84,6 @@ class SimManager:
     def __enter__(self):
         output_dir_path = self._aquire_output_dir()
         self._paths = Paths(output_dir_path, suffix=self._suffix)
-        if self.tee_stdx_to is not None:
-            self.stdout_redirected_obj = stdout_teed(os.path.join(self._paths.log_path, self.tee_stdx_to))
         try:
             self._store_sim_reproduction_data()
         except SimMetadataManagerError as E:
@@ -96,6 +94,8 @@ class SimManager:
                 description_file = os.path.join(self.paths.output_dir_path, 'DESCRIPTION.yaml')
                 editor = os.environ.get('EDITOR', 'vim')
                 subprocess.call(shlex.split(editor) + [description_file])
+            if self.tee_stdx_to is not None:
+                self.stdout_redirected_obj = stdout_teed(os.path.join(self._paths.log_path, self.tee_stdx_to))
         except Exception:
             _rm_anything_recursive(output_dir_path)
             raise
