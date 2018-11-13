@@ -25,5 +25,5 @@ fi
 sim_result_dir=$1
 
 commit_id=$(cat "$sim_result_dir/.commit_id") &&
-    git checkout $commit_id &&
-    cat "$sim_result_dir/.patch" | subpatch.sh apply
+    git checkout $commit_id && git submodule update --init --recursive &&
+    (cat "$sim_result_dir/.patch" | subpatch.sh apply)

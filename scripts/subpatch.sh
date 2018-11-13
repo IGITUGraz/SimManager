@@ -23,7 +23,7 @@ case "$1" in
         fi
 
         make_chunk $root
-        for module in $(git submodule  foreach --recursive 'echo $toplevel/$path' | grep -v Entering); do
+        for module in $(git submodule --quiet foreach --recursive 'echo $toplevel/$path'); do
             make_chunk $module
         done
     ;;
@@ -47,8 +47,13 @@ case "$1" in
             done
             echo Patching $root$pwd
             cd $root$pwd
-
-            echo "$patch" | git apply --index || true
+            if (echo "$patch" | git apply --index --check); then
+                echo "$patch" | git apply --index
+		git submodule update --init  # submodule update must be performed manually
+            else
+        	echo "Could not apply patch"
+		exit 1
+            fi
         done
         unset IFS
     ;;
