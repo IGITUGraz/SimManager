@@ -21,7 +21,7 @@ SimManager requires git to be installed, and your code to be versioned with git.
 Currently this package is not available in PyPI. This means that in order to
 install the latest version, run::
 
-    pip install https://github.com/IGITUGraz/SimManager/archive/v0.8.0.zip
+    pip install https://github.com/IGITUGraz/SimManager/archive/v0.8.2.zip
 
 The installation creates the module `simmanager` from which all the tools in the
 package are accesible. It also copies a script file called `subpatch.sh` to the
