@@ -1,6 +1,6 @@
 import os
 
-from simmanager.tools.stdouthandling import stdout_teed
+from .tools.stdouthandling import stdout_teed
 from .simmetadatamanager import SimMetadataManager, SimMetadataManagerError
 from .paths import Paths
 import subprocess
