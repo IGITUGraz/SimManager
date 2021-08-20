@@ -1,6 +1,7 @@
 import os
 
 from .tools.stdouthandling import stdout_teed
+from .tools.params import make_param_string
 from .simmetadatamanager import SimMetadataManager, SimMetadataManagerError
 from .paths import Paths
 import subprocess
@@ -8,7 +9,6 @@ import shlex
 from ._utils import _rm_anything_recursive
 from ._utils import _get_output
 
-from ._utils import make_param_string
 from ._utils import order_dict_alphabetically
 
 __author__ = 'anand'
