@@ -1,6 +1,7 @@
 import os
 
 from .tools.stdouthandling import stdout_teed
+from .tools.params import make_param_string
 from .simmetadatamanager import SimMetadataManager, SimMetadataManagerError
 from .paths import Paths
 import subprocess
@@ -8,7 +9,6 @@ import shlex
 from ._utils import _rm_anything_recursive
 from ._utils import _get_output
 
-from ._utils import make_param_string
 from ._utils import order_dict_alphabetically
 
 __author__ = 'anand'
@@ -53,10 +53,12 @@ class SimManager:
     :param sim_name: Simulation Name
     :param root_dir: Root directory containing results. See point 1. above for more
         details
+    :param output_dir_name: string containing the name of the output
+        directory. If specified, param_dict and suffix are ignored.
     :param param_dict: Dictionary in the form of ``dict(paramname1=param1val, paramname2=param2val)``.
         See point 1. above to see it's usage in creating the output directory.
         Default is an empty dictionary.
-    :param suffix: Suffix used for various output files. This is passed on as an
+    :param file_suffix: Suffix used for various output files. This is passed on as an
         argument in the creation of the contained Paths object
     :param write_protect_dirs: Enable/Disable write protecting the directories
     :param tee_stdx_to: Give file name here to tee the output to the provided file name.
@@ -68,14 +70,15 @@ class SimManager:
         from the EDITOR environment variable. It defaults to vim.
     """
 
-    def __init__(self, sim_name, root_dir, param_dict={}, suffix="", write_protect_dirs=True, tee_stdx_to=None, open_desc_for_edit=False):
+    def __init__(self, sim_name, root_dir, output_dir_name, *, file_suffix="", write_protect_dirs=True, tee_stdx_to=None, open_desc_for_edit=False):
 
         self._sim_name = sim_name
         self._root_dir = root_dir
         if not os.path.exists(root_dir):
             raise SimManagerError("The root directory {} does not exist. Please create it.".format(root_dir))
-        self._suffix = suffix
-        self._param_combo = order_dict_alphabetically(param_dict)
+        self._output_dir_name = output_dir_name
+        self._file_suffix = file_suffix
+
         self._write_protect_dirs = write_protect_dirs
         self.tee_stdx_to = tee_stdx_to
         self.open_desc_for_edit = open_desc_for_edit
@@ -83,10 +86,10 @@ class SimManager:
 
     def __enter__(self):
         output_dir_path = self._aquire_output_dir()
-        self._paths = Paths(output_dir_path, suffix=self._suffix)
+        self._paths = Paths(output_dir_path, suffix=self._file_suffix)
         try:
             self._store_sim_reproduction_data()
-        except SimMetadataManagerError as E:
+        except SimMetadataManagerError:
             _rm_anything_recursive(output_dir_path)
             raise
         try:
@@ -118,11 +121,7 @@ class SimManager:
         in it. If directory already exists, raise a :class:`PathsError`
         complaining about this.
         """
-        param_string = make_param_string(**self._param_combo)
-        if param_string == "":
-            output_dir_path = os.path.join(self._root_dir, self._sim_name)
-        else:
-            output_dir_path = os.path.join(self._root_dir, self._sim_name, param_string)
+        output_dir_path = os.path.join(self._root_dir, self._sim_name, self._output_dir_name)
         try:
             os.makedirs(output_dir_path)
         except OSError:
