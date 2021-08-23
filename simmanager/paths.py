@@ -1,6 +1,6 @@
 import os
 
-from ._utils import make_param_string
+from .tools import make_param_string
 
 __author__ = 'anand'
 
