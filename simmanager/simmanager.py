@@ -42,8 +42,8 @@ class SimManager:
     2.  After creating the directory, the SimManager creates 4 files in the output
         directory that contain all the information necessary to reproduce the
         simulation. For more details look at the documentation of
-        :meth:`simmanager.simdatamanager.SimDataManager.create_simulation_data` in the
-        :meth:`simmanager.simdatamanager.SimDataManager` class.
+        :meth:`simmanager.simmetadatamanager.SimDataManager.create_simulation_data` in the
+        :meth:`simmanager.simmetadatamanager.SimDataManager` class.
 
     3.  On exit (whether due to exception or not), The simulation manager removes write
         permission from all subdirectories of the output directory EXCEPT the results

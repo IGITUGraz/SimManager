@@ -33,29 +33,62 @@ How to use
 ==========
 .. code:: python
 
-    from simmanager import SimManager
-    if __name__ == '__main__':
-        # Store your simulation meta-data in the 'output-root-dir/simulation-name/*' 
-        #^ and use the paths object to get the location of the directories for data/simulation/results
-        with SimManager("simulation-name", "output-root-dir") as simman:
-            # paths object gives you access to the paths for your logs/data/results
-            # see simmanager.paths.Paths for documentation
-            paths = simman.paths
-            main()  # Run your actual main function with the simulation
-
-
-For read-only access to the simulation directory for analysis
-
-.. code:: python
-
     import os
-    from simmanager import Paths
-    if __name__ == '__main__':
-        # Use the root dir and simulation name where the simulation data is present
-        output_dir_path = os.path.join("output-root-dir", "simulation-name")
-        paths = Paths(output_dir_path)
-        # Do your analysis here ...
+    from simmanager import SimManager, Paths
 
+
+    def simulate_dice_rolls(n_rolls):
+        # Placeholder for the actual simulation function
+        import random
+        return [random.randint(1, 6) for _ in range(n_rolls)]
+
+
+    def main_sim(output_paths: Paths):
+        n_rolls = 1000
+        rolls = simulate_dice_rolls(n_rolls)
+        # Save the simulation data using output_paths
+        with open(output_paths.simulation_path / "dice_rolls.txt", "w") as f:
+            f.write("\n".join(map(str, rolls)))
+
+
+    def analysis_sim(output_paths: Paths):
+        # Read the simulation data
+        with open(output_paths.simulation_path / "dice_rolls.txt", "r") as f:
+            rolls = [int(line.strip()) for line in f.readlines()]
+
+        # Calculate the average roll
+        avg_roll = sum(rolls) / len(rolls)
+
+        # Analysis section
+        try:
+            with open(output_paths.simulation_path / "analysis.txt", "w") as f:
+                f.write("This should fail.")
+        except PermissionError:
+            print("Cannot write to the simulation directory. It's write-protected after the simulation.")
+
+        # Save analysis results to the results directory
+        with open(output_paths.results_path / "analysis.txt", "w") as f:
+            f.write(f"Average roll: {avg_roll:.2f}")
+
+
+    if __name__ == "__main__":
+        SimName = "DiceSimulation"
+        root_dir = os.environ.get("RESULTS_ROOT_DIR")
+
+        if not root_dir:
+            raise ValueError("RESULTS_ROOT_DIR environment variable must be set and non-empty")
+
+        with SimManager(SimName, root_dir) as simman:
+            main_sim(simman.paths)
+
+        # Initialize a new Paths object with the output path from simman.paths
+        new_paths = Paths(simman.paths.output_dir_path)
+
+        #---------------------------
+        # Analysis portion
+        #---------------------------
+
+        analysis_sim(new_paths)
 
 .. _tools:
 
